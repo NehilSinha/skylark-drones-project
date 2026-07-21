@@ -1,0 +1,15 @@
+spring:
+  ai:
+    openai:
+      # Dummy value so Spring AI's autoconfiguration doesn't fail fast on a blank
+      # key during context-load tests; no real HTTP call happens unless a test
+      # actually invokes the ChatClient (those tests mock ChatModel instead).
+      api-key: test-key
+      base-url: https://api.groq.com/openai/v1
+
+monday:
+  api:
+    token: test-token
+  boards:
+    deals-id: "1"
+    work-orders-id: "2"

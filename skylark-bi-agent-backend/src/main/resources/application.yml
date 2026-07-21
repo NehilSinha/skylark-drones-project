@@ -1,0 +1,106 @@
+spring:
+  application:
+    name: skylark-bi-agent-backend
+
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/skylark_bi_agent}
+
+  ai:
+    openai:
+      # Groq exposes an OpenAI-compatible Chat Completions API, so the OpenAI starter
+      # is reused as-is with a custom base-url instead of writing a bespoke integration.
+      api-key: ${GROQ_API_KEY:}
+      base-url: ${LLM_BASE_URL:https://api.groq.com/openai/v1}
+      chat:
+        options:
+          model: ${LLM_MODEL:llama-3.3-70b-versatile}
+          temperature: ${LLM_TEMPERATURE:0.2}
+
+server:
+  port: ${SERVER_PORT:8080}
+
+# All Monday.com wiring is environment-driven; no board ID is ever a literal in code.
+monday:
+  api:
+    base-url: ${MONDAY_API_BASE_URL:https://api.monday.com/v2}
+    token: ${MONDAY_API_TOKEN:}
+    connect-timeout-ms: ${MONDAY_CONNECT_TIMEOUT_MS:5000}
+    read-timeout-ms: ${MONDAY_READ_TIMEOUT_MS:15000}
+  boards:
+    deals-id: ${MONDAY_DEALS_BOARD_ID:}
+    work-orders-id: ${MONDAY_WORK_ORDERS_BOARD_ID:}
+  pagination:
+    page-size: ${MONDAY_PAGE_SIZE:100}
+    max-pages: ${MONDAY_MAX_PAGES:200}
+  rate-limit:
+    # Token-bucket sized conservatively under Monday's documented per-minute complexity
+    # budget; tune per the actual API plan tier once real board access is confirmed.
+    permits-per-minute: ${MONDAY_RATE_LIMIT_PER_MINUTE:60}
+  retry:
+    max-attempts: ${MONDAY_RETRY_MAX_ATTEMPTS:3}
+    initial-backoff-ms: ${MONDAY_RETRY_INITIAL_BACKOFF_MS:500}
+    backoff-multiplier: ${MONDAY_RETRY_BACKOFF_MULTIPLIER:2.0}
+  # Logical field -> Monday column ID. Column IDs are assigned by Monday at column
+  # creation time and cannot be predicted; these are blank until the real board
+  # exists, at which point set the MONDAY_DEALS_COLUMN_* env vars below. A blank
+  # mapping is safe — DealNormalizer treats an unmapped field as always-absent.
+  column-mapping:
+    deals:
+      owner-code: ${MONDAY_DEALS_COLUMN_OWNER_CODE:}
+      client-code: ${MONDAY_DEALS_COLUMN_CLIENT_CODE:}
+      deal-status: ${MONDAY_DEALS_COLUMN_DEAL_STATUS:}
+      close-date: ${MONDAY_DEALS_COLUMN_CLOSE_DATE:}
+      closure-probability: ${MONDAY_DEALS_COLUMN_CLOSURE_PROBABILITY:}
+      deal-value: ${MONDAY_DEALS_COLUMN_DEAL_VALUE:}
+      tentative-close-date: ${MONDAY_DEALS_COLUMN_TENTATIVE_CLOSE_DATE:}
+      deal-stage: ${MONDAY_DEALS_COLUMN_DEAL_STAGE:}
+      product-deal: ${MONDAY_DEALS_COLUMN_PRODUCT_DEAL:}
+      sector: ${MONDAY_DEALS_COLUMN_SECTOR:}
+      created-date: ${MONDAY_DEALS_COLUMN_CREATED_DATE:}
+    work-orders:
+      customer-code: ${MONDAY_WO_COLUMN_CUSTOMER_CODE:}
+      owner-code: ${MONDAY_WO_COLUMN_OWNER_CODE:}
+      sector: ${MONDAY_WO_COLUMN_SECTOR:}
+      execution-status: ${MONDAY_WO_COLUMN_EXECUTION_STATUS:}
+      probable-end-date: ${MONDAY_WO_COLUMN_PROBABLE_END_DATE:}
+      data-delivery-date: ${MONDAY_WO_COLUMN_DATA_DELIVERY_DATE:}
+      billing-status: ${MONDAY_WO_COLUMN_BILLING_STATUS:}
+      invoice-status: ${MONDAY_WO_COLUMN_INVOICE_STATUS:}
+      amount-to-be-billed: ${MONDAY_WO_COLUMN_AMOUNT_TO_BE_BILLED:}
+      collected-amount: ${MONDAY_WO_COLUMN_COLLECTED_AMOUNT:}
+      amount-receivable: ${MONDAY_WO_COLUMN_AMOUNT_RECEIVABLE:}
+      quantity-as-per-po: ${MONDAY_WO_COLUMN_QUANTITY_AS_PER_PO:}
+      quantity-billed: ${MONDAY_WO_COLUMN_QUANTITY_BILLED:}
+
+entity-resolution:
+  # COMPANY089 (Deal Tracker) vs WOCOMPANY_002 (Work Orders) - see ADR-001.
+  client-code-prefixes-to-strip: ${ENTITY_RESOLUTION_PREFIXES:WOCOMPANY_,COMPANY}
+  fuzzy-auto-accept-threshold: ${ENTITY_RESOLUTION_AUTO_ACCEPT_THRESHOLD:0.85}
+  fuzzy-possible-threshold: ${ENTITY_RESOLUTION_POSSIBLE_THRESHOLD:0.70}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+  cache:
+    analytics-ttl-seconds: ${ANALYTICS_CACHE_TTL_SECONDS:900}
+  memory:
+    prompt-history-ttl-seconds: ${PROMPT_HISTORY_TTL_SECONDS:7776000}
+    max-context-turns: ${MAX_CONTEXT_TURNS:12}
+  forecast:
+    # High/Medium/Low Closure Probability -> weight, confirmed 2026-07-21 (PHASE-4-DESIGN.md).
+    probability-weights:
+      HIGH: ${FORECAST_WEIGHT_HIGH:0.8}
+      MEDIUM: ${FORECAST_WEIGHT_MEDIUM:0.5}
+      LOW: ${FORECAST_WEIGHT_LOW:0.2}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    root: INFO
+    com.skylark.skylarkbiagentbackend: DEBUG
